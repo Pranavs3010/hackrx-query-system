@@ -5,6 +5,8 @@ import logging
 from dotenv import load_dotenv
 from fastapi import FastAPI, Depends, HTTPException, Security
 from fastapi.security import APIKeyHeader
+# --- NEW: Import CORS Middleware ---
+from fastapi.middleware.cors import CORSMiddleware
 
 from .api_models import QueryRequest, QueryResponse
 from .services import QueryProcessor
@@ -18,6 +20,21 @@ app = FastAPI(
     description="Processes documents to answer contextual questions using LLMs.",
     version="1.0.0"
 )
+
+# --- NEW: Add CORS Middleware ---
+# This allows the API to be called from a web browser on a different domain.
+# We will allow all origins ("*") for simplicity, which is common for hackathons.
+origins = ["*"]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"], # Allows all methods (GET, POST, etc.)
+    allow_headers=["*"], # Allows all headers
+)
+# --- END OF NEW CODE ---
+
 
 API_KEY = os.getenv("API_AUTH_TOKEN")
 API_KEY_NAME = "Authorization"

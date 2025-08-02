@@ -11,3 +11,8 @@ class QueryRequest(BaseModel):
 class QueryResponse(BaseModel):
     """Defines the structure for the outgoing API response."""
     answers: List[str] = Field(..., description="List of generated answers corresponding to the questions.")
+
+class QueryResponse(BaseModel):
+    # This says the JSON must have a key "answers"
+    # and its value must be a list of strings.
+    answers: List[str] = Field(...)
