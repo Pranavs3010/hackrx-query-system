@@ -20,15 +20,5 @@ pypdf
 # For creating embeddings and using the vector store
 sentence-transformers
 faiss-cpu
-
-# For loading environment variables from the .env file
-python-dotenv
-
-# Tokenizer used by LangChain for text processing
-tiktoken
-
-# Dependencies for processing non-PDF files
-# For processing .docx files
-docx2txt
-# For processing .eml files (and other unstructured data)
-unstructured
+pypdf
+requests
