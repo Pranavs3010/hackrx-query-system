@@ -1,9 +1,34 @@
+# /intelligent-query-retrieval-system/requirements.txt
+
+# For the web framework and server
 fastapi
 uvicorn[standard]
-pydantic
-python-dotenv
+
+# For LLM interaction with Google's Gemini models
+langchain-google-genai
+
+# Core LangChain components for building the pipeline
 langchain
-langchain-openai
-faiss-cpu
-pypdf
+langchain-community
+
+# For downloading documents from URLs
 requests
+
+# For processing PDF documents
+pypdf
+
+# For creating embeddings and using the vector store
+sentence-transformers
+faiss-cpu
+
+# For loading environment variables from the .env file
+python-dotenv
+
+# Tokenizer used by LangChain for text processing
+tiktoken
+
+# Dependencies for processing non-PDF files
+# For processing .docx files
+docx2txt
+# For processing .eml files (and other unstructured data)
+unstructured
