@@ -2,40 +2,37 @@
 
 import os
 import logging
+# --- NEW: Import the 'time' library ---
+import time
 from dotenv import load_dotenv
 from fastapi import FastAPI, Depends, HTTPException, Security
 from fastapi.security import APIKeyHeader
-# --- NEW: Import CORS Middleware ---
 from fastapi.middleware.cors import CORSMiddleware
 
 from .api_models import QueryRequest, QueryResponse
 from .services import QueryProcessor
 
-# Load API keys and other environment variables from the .env file
+# Load environment variables
 load_dotenv()
 
-# --- Application and Security Setup ---
+# --- Application Setup ---
 app = FastAPI(
     title="Intelligent Query–Retrieval System",
     description="Processes documents to answer contextual questions using LLMs.",
     version="1.0.0"
 )
 
-# --- NEW: Add CORS Middleware ---
-# This allows the API to be called from a web browser on a different domain.
-# We will allow all origins ("*") for simplicity, which is common for hackathons.
+# CORS Middleware
 origins = ["*"]
-
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
     allow_credentials=True,
-    allow_methods=["*"], # Allows all methods (GET, POST, etc.)
-    allow_headers=["*"], # Allows all headers
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
-# --- END OF NEW CODE ---
 
-
+# API Key Security
 API_KEY = os.getenv("API_AUTH_TOKEN")
 API_KEY_NAME = "Authorization"
 api_key_header = APIKeyHeader(name=API_KEY_NAME, auto_error=False)
@@ -44,23 +41,19 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 async def get_api_key(api_key: str = Security(api_key_header)):
-    """Dependency function to validate the API bearer token."""
     if not api_key or api_key != f"Bearer {API_KEY}":
-        logger.warning("Failed authentication attempt.")
         raise HTTPException(status_code=403, detail="Could not validate credentials")
     return api_key
 
 # --- Service Initialization ---
-# Check for the Google API key on startup
 if not os.getenv("GOOGLE_API_KEY"):
     raise RuntimeError("GOOGLE_API_KEY environment variable not set.")
-
-# Instantiate the QueryProcessor. It will be reused for all requests.
 query_processor = QueryProcessor()
 
-# --- API Endpoint Definition ---
+
+# --- API Endpoint ---
 @app.post(
-    "/api/v1/hackrx/run", 
+    "/api/v1/hackrx/run",
     response_model=QueryResponse,
     tags=["Query Retrieval"],
     summary="Process a document and answer questions"
@@ -69,29 +62,30 @@ async def run_submission(
     request: QueryRequest,
     api_key: str = Depends(get_api_key)
 ):
-    """
-    This endpoint implements the full RAG pipeline:
-    1.  **Input Document**: Downloads a document from the provided URL.
-    2.  **Embedding & Indexing**: Processes and indexes the document in-memory using FAISS.
-    3.  **Retrieval & Answering**: For each question, retrieves relevant context
-        and uses the Gemini LLM to generate a precise answer.
-    4.  **JSON Output**: Returns a structured JSON response with all answers.
-    """
     try:
-        # This is a stateful operation; the processor holds the indexed document.
         query_processor.process_document(request.documents)
 
         answers = []
-        for question in request.questions:
+        # --- MODIFICATION ---
+        # We will loop through the questions with an index to add a delay
+        for i, question in enumerate(request.questions):
+            # For the first question (index 0), don't sleep.
+            # For all subsequent questions, wait 2 seconds before making the next API call.
+            # This respects the API's rate limits.
+            if i > 0:
+                logger.info("Waiting for 2 seconds to respect API rate limits...")
+                time.sleep(1)
+            
             answer = query_processor.answer_question(question)
             answers.append(answer)
+        # --- END OF MODIFICATION ---
         
         logger.info("Successfully answered all questions.")
         return QueryResponse(answers=answers)
 
     except ValueError as e:
         logger.error(f"Validation Error: {e}", exc_info=True)
-        raise HTTPException(status_code=400, detail=str(e)) # Bad Request for unsupported file type
+        raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         logger.error(f"An unexpected error occurred: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="An internal server error occurred.")
